@@ -7,6 +7,9 @@ PRN = 0b01000111
 HLT = 0b00000001
 MUL = 0b10100010
 ADD = 0b10100000
+SUB = 0b10100001
+PUSH = 0b01000101
+POP = 0b01000110
 
 
 class CPU:
@@ -21,6 +24,9 @@ class CPU:
 
         # Create program counter
         self.pc = 0
+
+        # Create stack pointer
+        self.sp = 0
 
         # Running CPU is true
         self.running = True
@@ -73,20 +79,32 @@ class CPU:
         if len(sys.argv) != 2:
             print('ERROR: Must have file name')
             sys.exit(1)
-        print(self.ram)
-        print(type(self.ram[0]))
 
-    def alu(self, op, reg_a, reg_b):
+    def alu(self, op, reg_a, reg_b=None):
         """ALU operations."""
-        print(
-            f"reg[reg_a] = {self.reg[reg_a]},reg[reg_b] = {self.reg[reg_b] }")
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
             self.pc += 3
-        # elif op == "SUB": etc
+        elif op == "SUB":
+            self.reg[reg_a] *= self.reg[reg_b]
+            self.pc += 3
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
             self.pc += 3
+        elif op == "PUSH":
+            # Decrement stack pointer
+            self.sp -= 1
+            # Set reg value in ram at stack pointer
+            self.ram[self.sp] = self.reg[reg_a]
+            # Increment pc
+            self.pc += 2
+        elif op == "POP":
+            # Increment stack pointer
+            # Set reg to popped value
+            self.reg[reg_a] = self.ram[self.sp]
+            # Increment pc
+            self.sp += 1
+            self.pc += 2
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -123,8 +141,8 @@ class CPU:
     def run(self):
         """Run the CPU."""
         while self.running:
-            self.trace()
-            print('--------')
+            # self.trace()
+            # print('--------')
             # Setting current to IR
             ir = self.ram_read(self.pc)
 
@@ -138,11 +156,18 @@ class CPU:
             elif ir == PRN:
                 self.PRN_function(operand_a)
             elif ir == HLT:
+                # print(self.ram)
                 self.running = False
             elif ir == ADD:
                 self.alu('ADD', operand_a, operand_b)
+            elif ir == SUB:
+                self.alu('SUB', operand_a, operand_b)
             elif ir == MUL:
                 self.alu('MUL', operand_a, operand_b)
+            elif ir == PUSH:
+                self.alu('PUSH', operand_a)
+            elif ir == POP:
+                self.alu('POP', operand_a)
             else:
                 self.running = False
                 print(f"I did not understand that ir: {ir}")
